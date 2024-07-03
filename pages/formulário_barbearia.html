@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulário de Agendamento</title>
+    <!-- Adicionar SDK do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+    <!-- Adicionar Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        form {
+            background-color: white;
+            padding: 15px; /* Reduzido o padding para 15px */
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+            margin-top: 10px; /* Reduzido o espaço do topo */
+            margin-bottom: 10px; /* Reduzido o espaço da parte inferior */
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="tel"], input[type="date"], select {
+            width: calc(100% - 20px); /* Reduzido o espaço de cada lado do input/select */
+            padding: 10px;
+            margin-bottom: 10px; /* Reduzido o espaço entre os campos */
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .cancelar {
+            background-color: #f44336;
+            margin-bottom: 10px; /* Adicionado espaço entre o botão Cancelar e o texto informativo */
+        }
+        .cancelar:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <!-- Formulário de agendamento -->
+    <form class="formulario" id="appointmentForm">
+        <label for="name">Nome:</label>
+        <input type="text" id="name" name="name" required>
+        <label for="lastName">Sobrenome:</label>
+        <input type="text" id="lastName" name="lastName" required>
+        <label for="phone">Telefone:</label>
+        <input type="tel" id="phone" name="phone" required>
+        <label for="service">Serviço:</label>
+        <select id="service" name="service">
+            <option value="Corte">Corte de Cabelo - R$ 30,00</option>
+            <option value="Barba">Barba - R$ 20,00</option>
+            <option value="Cabelo e Barba">Corte e Barba - R$ 70,00</option>
+        </select>
+        <label for="date">Data:</label>
+        <input type="date" id="date" name="date" required>
+        <label for="time">Horário Disponível:</label>
+        <select id="time" name="time" required>
+            <!-- Horários disponíveis serão preenchidos dinamicamente -->
+        </select>
+        <button type="submit">Agendar</button>
+        <!-- Botão para abrir outra página -->
+        <button class="cancelar" type="button" onclick="window.location.href='mensagem_usuario.html'">Cancelar</button>
+        <strong>Para remarcar envie um pedido de cancelamento e preencha este formulário novamente escolhendo a nova data e horário</strong>
+    </form>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyB-AgTtXLRdg87arNJwoqQAf_jI67ptyAc",
+            authDomain: "barbearia-ed864.firebaseapp.com",
+            projectId: "barbearia-ed864",
+            storageBucket: "barbearia-ed864.appspot.com",
+            messagingSenderId: "962327071728",
+            appId: "1:962327071728:web:b9992bf0f98bd303556b35"
+        };
+
+        // Inicializar o Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // Referência ao banco de dados
+        const database = firebase.database();
+
+        // Referências dos elementos do formulário
+        const form = document.getElementById('appointmentForm');
+        const serviceSelect = document.getElementById('service');
+        const timeSelect = document.getElementById('time');
+        const dateInput = document.getElementById('date');
+
+        // Função para carregar os horários disponíveis
+        function loadAvailableTimes(date) {
+            const appointmentsRef = database.ref('agendamentos');
+            const formattedDate = formatDate(date);
+
+            // Consultar os agendamentos para a data selecionada
+            appointmentsRef.orderByChild('date').equalTo(formattedDate).once('value', snapshot => {
+                const appointments = snapshot.val();
+                const allTimes = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00']; // Horários disponíveis
+                let unavailableTimes = [];
+
+                if (appointments) {
+                    // Filtrar os horários já ocupados
+                    Object.values(appointments).forEach(appointment => {
+                        unavailableTimes.push(appointment.time);
+                    });
+                }
+
+                // Mostrar apenas os horários disponíveis
+                const availableTimes = allTimes.filter(time => !unavailableTimes.includes(time));
+
+                // Limpar opções anteriores
+                timeSelect.innerHTML = '';
+
+                // Adicionar novas opções
+                availableTimes.forEach(time => {
+                    const option = document.createElement('option');
+                    option.textContent = time;
+                    option.value = time;
+                    timeSelect.appendChild(option);
+                });
+            });
+        }
+
+        // Inicializar o Datepicker para seleção de data
+        flatpickr(dateInput, {
+            dateFormat: 'Y-m-d',
+            minDate: 'today',
+            onChange: function(selectedDates) {
+                if (selectedDates.length > 0) {
+                    loadAvailableTimes(selectedDates[0]);
+                }
+            }
+        });
+
+        // Função para formatar a data no formato UTC (ano-mês-dia)
+        function formatDate(date) {
+            const year = date.getUTCFullYear();
+            const month = ('0' + (date.getUTCMonth() + 1)).slice(-2);
+            const day = ('0' + date.getUTCDate()).slice(-2);
+
+            return `${day}-${month}-${year}`;
+        }
+
+        // Função para enviar dados ao Firebase
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const lastName = document.getElementById('lastName').value;
+            const phone = document.getElementById('phone').value;
+            const service = serviceSelect.value;
+            const time = timeSelect.value;
+            const selectedDate = new Date(dateInput.value);
+
+            // Verificar se o horário está disponível
+            const isAvailable = await isTimeSlotAvailable(selectedDate, time);
+
+            if (!isAvailable) {
+                alert('Este horário já está ocupado. Por favor, escolha outro horário.');
+                return;
+            }
+
+            // Referência ao caminho no Realtime Database
+            const appointmentsRef = database.ref('agendamentos');
+
+            // Enviar dados
+            appointmentsRef.push({
+                name: name,
+                lastName: lastName,
+                phone: phone,
+                service: service,
+                time: time,
+                date: formatDate(selectedDate), // Formato UTC
+                datetime: firebase.database.ServerValue.TIMESTAMP // Usar timestamp do servidor Firebase
+            }).then(() => {
+                alert(`Agendamento realizado com sucesso para ${formatDate(selectedDate)} às ${time}!`);
+                form.reset();
+                loadAvailableTimes(selectedDate); // Recarregar horários disponíveis após agendamento
+            }).catch((error) => {
+                alert('Erro ao realizar agendamento: ' + error.message);
+            });
+        });
+
+        // Função para verificar se o horário está disponível
+        function isTimeSlotAvailable(date, time) {
+            return new Promise((resolve, reject) => {
+                const datetime = `${formatDate(date)}T${time}:00`;
+                const appointmentsRef = database.ref('agendamentos').orderByChild('datetime').equalTo(datetime);
+                appointmentsRef.once('value', snapshot => {
+                    if (snapshot.exists()) {
+                        resolve(false); // Horário ocupado
+                    } else {
+                        resolve(true); // Horário disponível
+                    }
+                }, error => {
+                    reject(error);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

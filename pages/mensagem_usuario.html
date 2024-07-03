@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulário de Mensagens</title>
+    <!-- Adicionar SDK do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        form {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="tel"], textarea {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px; /* Espaçamento entre os botões e o botão de enviar */
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <!-- Formulário de mensagens -->
+    <form id="messageForm">
+        <label for="name">Nome:</label>
+        <input type="text" id="name" name="name" required><br><br>
+        <label for="surname">Sobrenome:</label>
+        <input type="text" id="surname" name="surname" required><br><br>
+        <label for="phone">Telefone:</label>
+        <input type="tel" id="phone" name="phone" required><br><br>
+        <select id="message" name="message" required>
+            <option value="">Selecione uma mensagem</option>
+            <option value="Quero cancelar">Quero cancelar esta data</option>
+        </select><br><br>
+        <button type="submit">Enviar Mensagem</button>
+    </form>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyB-AgTtXLRdg87arNJwoqQAf_jI67ptyAc",
+            authDomain: "barbearia-ed864.firebaseapp.com",
+            projectId: "barbearia-ed864",
+            storageBucket: "barbearia-ed864.appspot.com",
+            messagingSenderId: "962327071728",
+            appId: "1:962327071728:web:b9992bf0f98bd303556b35"
+        };
+        
+        // Inicializar o Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        // Referência ao banco de dados
+        const database = firebase.database();
+
+        // Referência ao formulário
+        const messageForm = document.getElementById('messageForm');
+
+        // Evento de envio do formulário
+        messageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            // Obter valores do formulário
+            const name = messageForm.name.value;
+            const surname = messageForm.surname.value;
+            const phone = messageForm.phone.value;
+            const message = messageForm.message.value;
+            const timestamp = firebase.database.ServerValue.TIMESTAMP;
+
+            // Referência ao caminho no Realtime Database
+            const messagesRef = database.ref('mensagens');
+
+            // Enviar dados
+            messagesRef.push({
+                name: name,
+                surname: surname,
+                phone: phone,
+                text: message,
+                timestamp: timestamp
+            }).then(() => {
+                alert('Mensagem enviada com sucesso!');
+                messageForm.reset();
+            }).catch((error) => {
+                alert('Erro ao enviar mensagem: ' + error.message);
+            });
+        });
+    </script>
+</body>
+</html>

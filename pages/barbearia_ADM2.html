@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Agendamentos</title>
+    <!-- Adicionar SDK do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+    <!-- Adicionar Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        form {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        select, input[type="text"], input[type="tel"], input[type="date"] {
+            width: calc(100% - 16px);
+            padding: 10px;
+            margin-bottom: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .btn-remove {
+            width: 100%;
+            padding: 10px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 5%;
+        }
+        .btn-remove:hover {
+            background-color: #d32f2f;
+        }
+        .btn-reschedule {
+            width: 100%;
+            padding: 10px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 5%;
+        }
+        .btn-reschedule:hover {
+            background-color: #1976D2;
+        }
+
+        .btn-remove-message {
+            width: 30%;
+            padding: 10px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 5%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Agendamentos</h2>
+        <table id="appointmentsTable">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Serviço</th>
+                    <th>Data</th>
+                    <th>Horário</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Dados dos agendamentos serão inseridos dinamicamente aqui -->
+            </tbody>
+        </table>
+    </div>
+    <br><br>
+    <div class="container">
+        <h2>Mensagens</h2>
+        <div id="messages">
+            <!-- Mensagens serão inseridas dinamicamente aqui -->
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyB-AgTtXLRdg87arNJwoqQAf_jI67ptyAc",
+            authDomain: "barbearia-ed864.firebaseapp.com",
+            projectId: "barbearia-ed864",
+            storageBucket: "barbearia-ed864.appspot.com",
+            messagingSenderId: "962327071728",
+            appId: "1:962327071728:web:b9992bf0f98bd303556b35"
+        };
+        
+        // Inicializar o Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        // Referência ao banco de dados
+        const database = firebase.database();
+
+        // Referências dos elementos do formulário
+        const manageForm = document.getElementById('manageForm');
+        const selectedAppointment = document.getElementById('selectedAppointment');
+
+        // Função para carregar os agendamentos
+        function loadAppointments() {
+            const appointmentsRef = database.ref('agendamentos');
+            appointmentsRef.on('value', snapshot => {
+                const appointments = snapshot.val();
+                if (appointments) {
+                    const appointmentKeys = Object.keys(appointments);
+                    const appointmentsTable = document.getElementById('appointmentsTable').getElementsByTagName('tbody')[0];
+                    appointmentsTable.innerHTML = ''; // Limpar tabela antes de atualizar
+                    
+                    // Ordenar agendamentos por data e hora
+                    const sortedKeys = appointmentKeys.sort((a, b) => {
+                        const dateA = new Date(`${appointments[a].date.split('-').reverse().join('-')}T${appointments[a].time}`);
+                        const dateB = new Date(`${appointments[b].date.split('-').reverse().join('-')}T${appointments[b].time}`);
+                        return dateA - dateB; // Ordena em ordem crescente
+                    });
+                    
+                    sortedKeys.forEach(key => {
+                        const appointment = appointments[key];
+                        const row = appointmentsTable.insertRow();
+                        row.innerHTML = `
+                            <td>${appointment.name} ${appointment.lastName}</td>
+                            <td>${appointment.phone}</td>
+                            <td>${appointment.service}</td>
+                            <td>${appointment.date}</td>
+                            <td>${appointment.time}</td>
+                            <td><button class="btn-remove" onclick="removeAppointment('${key}')">Remover</button> <button class="btn-reschedule" onclick="rescheduleAppointment('${key}', '${appointment.date}', '${appointment.time}')">Remarcar</button></td>
+                        `;
+                    });
+
+                    // Atualizar opções de seleção para gerenciar agendamentos
+                    updateManageOptions(sortedKeys, appointments);
+                } else {
+                    appointmentsTable.innerHTML = '<tr><td colspan="6">Nenhum agendamento encontrado.</td></tr>';
+                    selectedAppointment.innerHTML = '<option value="">Nenhum agendamento encontrado.</option>';
+                }
+            });
+        }
+
+        // Função para atualizar as opções de seleção de agendamento no formulário de gerenciamento
+        function updateManageOptions(keys, appointments) {
+            selectedAppointment.innerHTML = '';
+            keys.forEach(key => {
+                const appointment = appointments[key];
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = `${appointment.name} ${appointment.lastName} - ${appointment.date} às ${appointment.time}`;
+                selectedAppointment.appendChild(option);
+            });
+        }
+
+        // Função para remover um agendamento
+        function removeAppointment(key) {
+            const appointmentRef = database.ref(`agendamentos/${key}`);
+            appointmentRef.remove()
+                .then(() => {
+                    alert('Agendamento removido com sucesso.');
+                })
+                .catch(error => {
+                    alert('Erro ao remover agendamento: ' + error.message);
+                });
+        }
+
+        // Função para remarcar um agendamento
+        function rescheduleAppointment(key, currentDate, currentTime) {
+            const appointmentsRef = database.ref('agendamentos');
+            appointmentsRef.once('value', snapshot => {
+                const appointments = snapshot.val();
+                const allTimes = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+                let unavailableTimes = [];
+
+                if (appointments) {
+                    Object.values(appointments).forEach(appointment => {
+                        if (appointment.date === currentDate && appointment.time !== currentTime) {
+                            unavailableTimes.push(appointment.time);
+                        }
+                    });
+                }
+
+                // Verificar se todos os horários estão disponíveis
+                const availableTimes = allTimes.filter(time => !unavailableTimes.includes(time));
+
+                // Se nenhum horário estiver disponível, alertar e sair da função
+                if (availableTimes.length === 0) {
+                    alert('Não há horários disponíveis para remarcar.');
+                    return;
+                }
+
+                // Remarcação do agendamento
+                const updatedAppointment = appointments[key];
+                let rescheduleDate = currentDate;
+                let rescheduleTime;
+
+                do {
+                    rescheduleDate = prompt(`Escolha uma nova data para o agendamento (Formato: dd-mm-aaaa):`, rescheduleDate);
+                    if (!rescheduleDate) {
+                        return; // Se o usuário cancelar o prompt
+                    }
+                    rescheduleTime = prompt(`Escolha um novo horário para o agendamento (${availableTimes.join(', ')}):`, currentTime);
+                    if (!rescheduleTime) {
+                        return; // Se o usuário cancelar o prompt
+                    }
+                } while (!availableTimes.includes(rescheduleTime) || !isValidDate(rescheduleDate));
+
+                // Atualizar o agendamento no banco de dados
+                updatedAppointment.date = rescheduleDate;
+                updatedAppointment.time = rescheduleTime;
+
+                const appointmentRef = database.ref(`agendamentos/${key}`);
+                appointmentRef.update(updatedAppointment)
+                    .then(() => {
+                        alert('Agendamento remarcado com sucesso.');
+                    })
+                    .catch(error => {
+                        alert('Erro ao remarcar agendamento: ' + error.message);
+                    });
+            });
+        }
+
+        // Função auxiliar para validar a data no formato dd-mm-aaaa
+        function isValidDate(date) {
+            const regex = /^\d{2}-\d{2}-\d{4}$/;
+            if (!regex.test(date)) {
+                alert('Formato de data inválido. Use dd-mm-aaaa.');
+                return false;
+            }
+            const [day, month, year] = date.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, day);
+            return dateObj && dateObj.getMonth() + 1 === month && dateObj.getDate() === day && dateObj.getFullYear() === year;
+        }
+
+        /// Função para carregar as mensagens
+function loadMessages() {
+    const messagesRef = database.ref('mensagens');
+    messagesRef.on('value', snapshot => {
+        const messages = snapshot.val();
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML = '';
+        if (messages) {
+            const sortedMessages = Object.keys(messages).sort((a, b) => new Date(messages[a].timestamp) - new Date(messages[b].timestamp));
+            sortedMessages.forEach(key => {
+                const message = messages[key];
+                const messageElement = document.createElement('div');
+                messageElement.innerHTML = `
+                    <p><strong>Nome:</strong> ${message.name} ${message.surname}</p>
+                    <p><strong>Telefone:</strong> ${message.phone}</p>
+                    <p><strong>Mensagem:</strong> ${message.text}</p>
+                    <p><strong>Data e Hora:</strong> ${new Date(message.timestamp).toLocaleString()}</p>
+                    <button class="btn-remove-message" onclick="removeMessage('${key}')">Remover</button>
+                    <hr>
+                `;
+                messagesDiv.appendChild(messageElement);
+            });
+        } else {
+            messagesDiv.innerHTML = '<p>Nenhuma mensagem encontrada.</p>';
+        }
+    });
+}
+
+
+        // Função para remover uma mensagem
+        function removeMessage(key) {
+            const messageRef = database.ref(`mensagens/${key}`);
+            messageRef.remove()
+                .then(() => {
+                    alert('Mensagem removida com sucesso.');
+                })
+                .catch(error => {
+                    alert('Erro ao remover mensagem: ' + error.message);
+                });
+        }
+
+        // Carregar agendamentos e mensagens ao carregar a página
+        window.onload = function() {
+            loadAppointments();
+            loadMessages();
+        };
+    </script>
+</body>
+</html>
