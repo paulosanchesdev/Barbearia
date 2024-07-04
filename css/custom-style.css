@@ -242,9 +242,10 @@ i.box-circle-solid{
 	-moz-transition: 0.5s ease-in;
 }
 .top-nav .navbar-brand{
-	font-size: 28px;
+	font-size: 38px;
 	color: #fff;
 	font-family: 'Montserrat', sans-serif;
+	
 }
 .top-nav .search-box li a.nav-link{
 	border:1px solid #B47F41;
@@ -285,7 +286,7 @@ i.box-circle-solid{
 	height: 60%;
 }
 .intro-bg{
-	background:url("https://img.elo7.com.br/product/zoom/206473B/papel-de-parede-autocolante-para-barbearia-retro-fundo-preto-papel-de-parede-beb.jpg");
+	background:url("https://img.freepik.com/fotos-gratis/cadeiras-vintage-na-barbearia_155003-10150.jpg?w=826&t=st=1720059175~exp=1720059775~hmac=78fb9aef655d4a1ecd9727acb51a6b72ca0667aa998b77213df90a21e71849ec");
 	background-repeat:no-repeat;
 	background-position: center center;
 	background-size:cover;
